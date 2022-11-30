@@ -1,8 +1,14 @@
 import React, { createContext, useContext, useState } from 'react'
-import ConnectWallet from '../component/Button/ConnectWallet';
+import WalletConnectProvider from "@walletconnect/web3-provider";
+import Web3 from 'web3';
+
+
+const ProJectID = "4a5b98d025fa3b39b96e7fd686ded374";
+
 
 const defaultValue = {
-    connectWallet:()=>{},
+    connectMetamaskWallet:()=>{},
+    connectWalletConnect:()=>{},
     address:"",
     provider:null,
     web3:null,
@@ -12,16 +18,16 @@ const defaultValue = {
 
 const WalletContext = createContext(defaultValue);
 
-const expectedChains = [1,56];
+const expectedChains = [1,56,1353];
 
 export default function WalletContextProvider({children}:any) {
     const [address,setAddress] = useState('0x');
     const [provider,setProvider] = useState(null);
-    const [web3,setWeb3] = useState(null);
+    const [web3,setWeb3] = useState<any>(null);
     const [chainId,setChainId] = useState(6868);
     const [wrongChain,setWrongChain] = useState(false);
     
-    const connectWallet = ()=>{
+    const connectMetamaskWallet = ()=>{
         const Window:any = window;
         if(Window.ethereum){
             Window.ethereum.request({ method: 'eth_requestAccounts' }).then((e:any)=>{
@@ -72,8 +78,59 @@ export default function WalletContextProvider({children}:any) {
             console.log("Metamask Not Installed")
         }
     }
+    const connectWalletConnect = ()=>{
+        try{
+
+            const provider1:any = new WalletConnectProvider({
+                rpc: {
+                    1353: "https://xapi.cicscan.com",
+                    56:"",
+                    1:""
+                },
+                infuraId:"c22c90a767684c5fbd7257da57802b35"
+            });
+            provider1.enable().then(async (res:any)=>{
+                console.log(res);
+                let web3 = new Web3(provider1);
+                setAddress(res[0]);
+                let chainid = await web3.eth.getChainId();
+                // setWeb3(new Web3(provider1));
+                // provider1.chainId()
+                setChainId(chainid)
+                if(!expectedChains.includes(chainid)){
+                    setWrongChain(true);
+                }
+                setProvider(provider1);
+            }).catch((e:any)=>{
+                console.log(e);
+            })
+            
+            provider1.on("accountsChanged", (accounts: string[]) => {
+                setAddress(accounts[0]);
+            });
+            
+            // Subscribe to chainId change
+            provider1.on("chainChanged", (chainId: number) => {
+                try{    
+                    if(!expectedChains.includes(chainId)){
+                        setWrongChain(true);
+                    }else{
+                        setWrongChain(false);
+                    }
+                }catch(e){
+                    console.log(chainId);
+                }
+            });
+            provider1.on("error",(e:any)=>{
+                console.log(e);
+            })
+        }catch(e){
+
+        }
+    }
     const store = {
-        connectWallet,
+        connectMetamaskWallet,
+        connectWalletConnect,
         address,
         provider,
         web3,
